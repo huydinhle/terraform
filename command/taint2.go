@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/hashicorp/terraform/backend"
 	clistate "github.com/hashicorp/terraform/command/state"
 	"github.com/hashicorp/terraform/state"
 	"github.com/hashicorp/terraform/terraform"
@@ -41,6 +42,57 @@ func (c *TaintCommand2) Run(args []string) int {
 		return 1
 	}
 
+	// Start of Huy's code
+	c.Meta.targets = []string{args[0]}
+	fmt.Printf("c.Meta.targets = %+v\n", c.Meta.targets)
+
+	configPath, err := ModulePath(cmdFlags.Args())
+	if err != nil {
+		c.Ui.Error(err.Error())
+		return 1
+	}
+
+	var mod *module.Tree
+	mod, err = c.Module(configPath)
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf("Failed to load root config module: %s", err))
+		return 1
+	}
+
+	// Load the backend
+	b, err := c.Backend(&BackendOpts{
+		ConfigPath: configPath,
+	})
+
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf("Failed to load backend: %s", err))
+		return 1
+	}
+
+	// Build the operation
+	opReq := c.Operation()
+	opReq.Destroy = destroy
+	opReq.Module = mod
+	opReq.Plan = plan
+	opReq.PlanRefresh = refresh
+	opReq.PlanOutPath = outPath
+	opReq.Type = backend.OperationTypeTaint
+	opReq.LockState = c.Meta.stateLock
+
+	// Perform the operation
+	op, err := b.Operation(context.Background(), opReq)
+	if err != nil {
+		c.Ui.Error(fmt.Sprintf("Error starting operation: %s", err))
+		return 1
+	}
+
+	// Wait for the operation to complete
+	<-op.Done()
+	if err := op.Err; err != nil {
+		c.Ui.Error(err.Error())
+		return 1
+	}
+	// End of Huy's code
 	name := args[0]
 	if module == "" {
 		module = "root"
