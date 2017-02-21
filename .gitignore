@@ -3,7 +3,6 @@
 .DS_Store
 example.tf
 terraform.tfplan
-terraform.tfstate
 bin/
 modules-dev/
 /pkg/
