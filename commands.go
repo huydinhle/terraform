@@ -147,6 +147,12 @@ func init() {
 			}, nil
 		},
 
+		"taint2": func() (cli.Command, error) {
+			return &command.TaintCommand2{
+				Meta: meta,
+			}, nil
+		},
+
 		"validate": func() (cli.Command, error) {
 			return &command.ValidateCommand{
 				Meta: meta,
