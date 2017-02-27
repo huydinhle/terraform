@@ -11,4 +11,5 @@ const (
 	OperationTypeRefresh
 	OperationTypePlan
 	OperationTypeApply
+	OperationTypeTaint
 )

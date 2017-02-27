@@ -142,6 +142,8 @@ func (b *Local) Operation(ctx context.Context, op *backend.Operation) (*backend.
 		f = b.opPlan
 	case backend.OperationTypeApply:
 		f = b.opApply
+	case backend.OperationTypeTaint:
+		f = b.opTaint
 	default:
 		return nil, fmt.Errorf(
 			"Unsupported operation type: %s\n\n"+

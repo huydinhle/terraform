@@ -267,6 +267,15 @@ func (c *Context) Graph(typ GraphType, opts *ContextGraphOpts) (*Graph, error) {
 			Targets:   c.targets,
 			Validate:  opts.Validate,
 		}).Build(RootModulePath)
+
+	case GraphTypeTaint:
+		return (&TaintGraphBuilder{
+			Module:    c.module,
+			State:     c.state,
+			Providers: c.components.ResourceProviders(),
+			Targets:   c.targets,
+			Validate:  opts.Validate,
+		}).Build(RootModulePath)
 	}
 
 	return nil, fmt.Errorf("unknown graph type: %s", typ)
@@ -578,6 +587,34 @@ func (c *Context) Refresh() (*State, error) {
 
 	// Build the graph.
 	graph, err := c.Graph(GraphTypeRefresh, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Do the walk
+	if _, err := c.walk(graph, graph, walkRefresh); err != nil {
+		return nil, err
+	}
+
+	// Clean out any unused things
+	c.state.prune()
+
+	return c.state, nil
+}
+
+// Taint goes through all the resources in the state and mark them
+// as tainted
+//
+// Even in the case an error is returned, the state will be returned and
+// will potentially be partially updated.
+func (c *Context) Taint() (*State, error) {
+	defer c.acquireRun("taint")()
+
+	// Copy our own state
+	c.state = c.state.DeepCopy()
+
+	// Build the graph.
+	graph, err := c.Graph(GraphTypeTaint, nil)
 	if err != nil {
 		return nil, err
 	}
